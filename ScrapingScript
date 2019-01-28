@@ -1,0 +1,84 @@
+ private ProgressDialog mProgressDialog;
+    private String url = "https://elcircol.cat/agenda";
+    private ArrayList<String> mTitolList = new ArrayList<>();
+    private ArrayList<String> mDateList = new ArrayList<>();
+    private ArrayList<String> mDescriptionList = new ArrayList<>();
+    private ArrayList<String> mLinkList = new ArrayList<>();
+    private ArrayList<String> mCalendarList = new ArrayList<>();
+
+
+
+    private class Description extends AsyncTask<Void, Void, Void> {
+        String desc;
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            mProgressDialog = new ProgressDialog(ActivityAgenda.this);
+            mProgressDialog.setTitle("MyFirstApp");
+            mProgressDialog.setMessage("Loading...");
+            mProgressDialog.setIndeterminate(false);
+            mProgressDialog.show();
+        }
+
+        @Override
+        protected Void doInBackground(Void... params) {
+            try {
+                // Connect to the web site
+                Document mBlogDocument = Jsoup.connect(url).get();
+                // Using Elements to get the Meta data
+                Elements mElementDataSize = mBlogDocument.select("a[class=tribe-event-url]");
+                // Locate the content attribute
+                int mElementSize = mElementDataSize.size();
+
+                for (int i = 0; i < mElementSize; i++) {
+                    Elements mElementAuthorName = mBlogDocument.select("a[class=tribe-event-url]").eq(i);
+                    String mTitleName = mElementAuthorName.text();
+
+                    Elements mElementBlogUploadDate = mBlogDocument.select("span[class=tribe-event-date-start]").eq(i);
+                    String mDate = mElementBlogUploadDate.text();
+
+                    Elements mElementBlogTitle = mBlogDocument.select("div[class=tribe-events-list-photo-description tribe-events-content]").select("p").eq(i);
+                    String mDescription = mElementBlogTitle.text();
+
+                    Elements mElementLink = mBlogDocument.select("a[class=tribe-event-url]").eq(i);
+                    String mLink = mElementLink.attr("abs:href");
+
+                    String mCalendar=mLink; // In case there is no Calendar link, store link from event
+
+                    try{
+                        Document mLinkDocument = Jsoup.connect(mLink).get();
+                        Elements mElementCalendar = mLinkDocument.select("a[class=tribe-events-gcal]").eq(i);
+                        mCalendar = mElementCalendar.attr("abs:href");
+
+                    }
+                    catch (Exception e){
+                        Toast.makeText(context,"No funciona. Prova més tard",Toast.LENGTH_SHORT).show();
+                    }
+
+
+                    mTitolList.add(mTitleName);
+                    mDateList.add(mDate);
+                    mDescriptionList.add(mDescription);
+                    mLinkList.add(mLink);
+                    mCalendarList.add(mCalendar);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void result) {
+            // Set description into TextView
+
+            RecyclerView mRecyclerView = (RecyclerView) findViewById(R.id.act_recyclerview);
+
+            DataAdapter mDataAdapter = new DataAdapter(ActivityAgenda.this, mTitolList, mDateList, mDescriptionList, mCalendarList, context);
+            RecyclerView.LayoutManager mLayoutManager = new LinearLayoutManager(getApplicationContext());
+            mRecyclerView.setLayoutManager(mLayoutManager);
+            mRecyclerView.setAdapter(mDataAdapter);
+
+            mProgressDialog.dismiss();
+        }
